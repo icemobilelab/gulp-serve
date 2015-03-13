@@ -2,7 +2,13 @@ gulp-serve
 ==========
 [![Build Status](https://travis-ci.org/nkt/gulp-serve.svg?branch=master)](https://travis-ci.org/nkt/gulp-serve)
 
-Provide connect-server functionality, using [connect.static](http://www.senchalabs.org/connect/static.html)
+This package is a modified version of the original [gulp-serve](https://www.npmjs.com/package/gulp-serve) to provide with proxying capabilities in case you have
+a distributed service and you still want to develop locally you can proxy your request to your localhost to the remote.
+
+Saving you the headache of CORS.
+
+Provide express-server functionality, using [express.static](http://expressjs.com/guide/using-middleware.html)
+Valid proxy properties: [http-proxy](https://github.com/nodejitsu/node-http-proxy/blob/caronte/lib/http-proxy.js#L37-L45)
 
 Install
 =======
@@ -15,15 +21,22 @@ Usage
 
 ```js
 var gulp = require('gulp');
-var serve = require('gulp-serve');
+var serve = require('gulp-proxy-serve');
 
-gulp.task('serve', serve('public'));
-gulp.task('serve-build', serve(['public', 'build']));
-gulp.task('serve-prod', serve({
+gulp.task('serve', serve('public')); //only static serve on public dir
+gulp.task('serve-build', serve(['public', 'build'])); //static serve public and build
+gulp.task('serve-prod', serve({ // static serve public and build, and proxy other requests to http://localhost:9090
     root: ['public', 'build'],
     port: 80,
     middleware: function(req, res) {
         // custom optional middleware
+    },
+    middlewares: [
+        // an array of middleware functions
+    ]
+    proxy: true,
+    proxyOptions: {
+        target: 'https://localhost:9090'
     }
 }));
 ```

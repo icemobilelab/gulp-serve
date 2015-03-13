@@ -1,11 +1,18 @@
 var util = require('gulp-util');
-var connect = require('connect');
+var defaults = require('lodash.defaults');
+var express = require('express');
 var http = require('http');
+var httpProxy = require('http-proxy');
+var allowCrossDomain = require('./lib/allow-cross-domain');
+var PROXY_OPTIONS = { target: 'http://localhost:9090' };
 
 module.exports = function (config) {
   config || (config = {});
   return function () {
-    var app = connect();
+    var app = express();
+    var proxyOptions = defaults(PROXY_OPTIONS, config.proxyOptions);
+    var proxy = httpProxy.createServer(proxyOptions);
+    /* ensure config format */
     if (typeof config === 'string') {
       config = {root:[config]};
     }
@@ -19,6 +26,7 @@ module.exports = function (config) {
       config.root = [config.root];
     }
 
+    /* middlewares */
     if (!config.middlewares) {
       config.middlewares = [];
     }
@@ -29,15 +37,27 @@ module.exports = function (config) {
       app.use(middleware);
     });
 
+    /* set up static serve */
     config.root.forEach(function (path) {
-      app.use(connect.static(path));
+      app.use(express.static(path));
     });
+
     if (!config.port) {
       config.port = 3000;
+    }
+
+    /* sexy proxy */
+    if (config.proxy) {
+        app.use(allowCrossDomain);
+        app.all('/*',  function (req, res) {
+            console.log('Proxying request to: %s', proxyOptions.target);
+            return proxy.proxyRequest(req, res, proxyOptions);
+        });
     }
 
     http.createServer(app).listen(config.port, config.hostname, function () {
       util.log(util.colors.bgGreen('Server started on ' + config.port + ' port'));
     });
+
   };
 };
