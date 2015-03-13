@@ -1,16 +1,20 @@
 var util = require('gulp-util');
+var nodeUtil = require('util');
 var defaults = require('lodash.defaults');
 var express = require('express');
 var http = require('http');
 var httpProxy = require('http-proxy');
 var allowCrossDomain = require('./lib/allow-cross-domain');
-var PROXY_OPTIONS = { target: 'http://localhost:9090' };
+var PROXY_OPTIONS = {
+  target: 'http://localhost:9090',
+  url: '/*'
+};
 
 module.exports = function (config) {
   config || (config = {});
   return function () {
     var app = express();
-    var proxyOptions = defaults(PROXY_OPTIONS, config.proxyOptions);
+    var proxyOptions = defaults(config.proxyOptions, PROXY_OPTIONS);
     var proxy = httpProxy.createServer(proxyOptions);
     /* ensure config format */
     if (typeof config === 'string') {
@@ -49,8 +53,8 @@ module.exports = function (config) {
     /* sexy proxy */
     if (config.proxy) {
         app.use(allowCrossDomain);
-        app.all('/*',  function (req, res) {
-            console.log('Proxying request to: %s', proxyOptions.target);
+        app.all(proxyOptions.url,  function (req, res) {
+            util.log(nodeUtil.format('Proxying request %s to: %s', req.url, proxyOptions.target));
             return proxy.proxyRequest(req, res, proxyOptions);
         });
     }
